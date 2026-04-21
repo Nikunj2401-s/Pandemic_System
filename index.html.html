@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PCOS — Pandemic Containment Optimization System</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Rajdhani:wght@300;400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#04090d; --sur:#081422; --sur2:#0c1c2e; --brd:#162d47;
+  --red:#ff1f3d; --org:#ff6a1a; --yel:#ffcc00; --grn:#00f57a;
+  --blu:#00b8ff; --pur:#9b3fff; --txt:#b8d0e0; --dim:#3a5a78;
+  --mono:'Share Tech Mono',monospace; --sans:'Rajdhani',sans-serif; --disp:'Orbitron',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,0,0,0.03) 3px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:9999;}
+
+header{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--brd);background:rgba(4,9,13,0.97);flex-shrink:0;z-index:10;}
+.logo{font-family:var(--disp);font-size:11px;letter-spacing:3px;color:var(--blu);text-shadow:0 0 18px rgba(0,184,255,0.5);}
+.logo em{color:var(--red);font-style:normal;}
+.hdr-r{display:flex;gap:20px;font-family:var(--mono);font-size:10px;color:var(--dim);align-items:center;}
+.pulse{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--grn);margin-right:5px;animation:blink 1.8s infinite;}
+@keyframes blink{0%,100%{opacity:1;box-shadow:0 0 5px var(--grn);}50%{opacity:.3;box-shadow:none;}}
+
+.layout{display:grid;grid-template-columns:255px 1fr 320px;flex:1;overflow:hidden;}
+
+/* LEFT */
+.left{border-right:1px solid var(--brd);display:flex;flex-direction:column;overflow-y:auto;}
+.sec{padding:12px 13px 10px;border-bottom:1px solid var(--brd);}
+.stitle{font-family:var(--disp);font-size:8px;letter-spacing:3px;color:var(--dim);margin-bottom:9px;}
+
+.algo-row{display:flex;gap:6px;}
+.abtn{flex:1;padding:9px 4px;border:1px solid var(--brd);background:var(--sur);font-family:var(--disp);font-size:10px;letter-spacing:2px;cursor:pointer;color:var(--dim);transition:all .2s;text-align:center;}
+.abtn:hover{border-color:var(--blu);color:var(--blu);}
+.abtn.bon{border-color:var(--blu);color:var(--blu);background:rgba(0,184,255,.1);}
+.abtn.don{border-color:var(--org);color:var(--org);background:rgba(255,106,26,.1);}
+
+.ibox{margin-top:8px;padding:8px 10px;border:1px solid var(--brd);border-left:2px solid var(--blu);font-size:11px;line-height:1.65;color:var(--dim);background:var(--sur);}
+.ibox.dfs{border-left-color:var(--org);}
+.ibox strong{display:block;margin-bottom:3px;font-size:12px;}
+
+.slgrp{display:flex;flex-direction:column;gap:10px;}
+.slrow{display:flex;flex-direction:column;gap:4px;}
+.sllbl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--dim);}
+.slv{color:var(--blu);}
+input[type=range]{-webkit-appearance:none;width:100%;height:2px;background:var(--brd);border-radius:1px;outline:none;cursor:pointer;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;border-radius:50%;background:var(--blu);box-shadow:0 0 6px rgba(0,184,255,.7);}
+
+.brow{display:flex;flex-direction:column;gap:7px;}
+.btn{width:100%;padding:10px;border:1px solid;background:transparent;font-family:var(--disp);font-size:9px;letter-spacing:2px;cursor:pointer;transition:all .2s;}
+.bgen{border-color:var(--dim);color:var(--dim);}
+.bgen:hover{border-color:var(--txt);color:var(--txt);}
+.brun{border-color:var(--grn);color:var(--grn);}
+.brun:hover{background:rgba(0,245,122,.08);box-shadow:0 0 12px rgba(0,245,122,.15);}
+.brun:disabled{opacity:.25;cursor:not-allowed;}
+.brst{border-color:var(--red);color:var(--red);}
+.brst:hover{background:rgba(255,31,61,.08);}
+
+.legend{display:flex;flex-direction:column;gap:6px;}
+.leg{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--dim);}
+.ldot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+/* CANVAS */
+.cw{position:relative;overflow:hidden;background:radial-gradient(ellipse at 45% 50%,rgba(0,40,80,.12) 0%,transparent 70%);}
+canvas{position:absolute;top:0;left:0;cursor:crosshair;}
+.cvo{position:absolute;top:10px;left:12px;font-family:var(--mono);font-size:10px;color:var(--dim);pointer-events:none;line-height:1.9;}
+.cvo span{display:block;}
+.cvb{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);font-family:var(--disp);font-size:9px;letter-spacing:3px;padding:5px 14px;border:1px solid var(--brd);background:rgba(4,9,13,.85);backdrop-filter:blur(8px);color:var(--dim);white-space:nowrap;pointer-events:none;}
+.zbtns{position:absolute;top:10px;right:10px;display:flex;flex-direction:column;gap:5px;}
+.zbtn{width:32px;height:32px;border:1px solid var(--brd);background:rgba(4,9,13,.85);color:var(--dim);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.zbtn:hover{border-color:var(--blu);color:var(--blu);}
+
+/* RIGHT */
+.right{border-left:1px solid var(--brd);display:flex;flex-direction:column;overflow:hidden;}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--brd);background:var(--brd);gap:1px;flex-shrink:0;}
+.sbox{background:var(--sur);padding:10px 6px;text-align:center;}
+.snum{font-family:var(--disp);font-size:18px;font-weight:900;line-height:1;margin-bottom:3px;}
+.slbl{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;color:var(--dim);}
+
+/* LOCKDOWN PANEL */
+.ldpanel{flex-shrink:0;border-bottom:1px solid var(--brd);background:var(--sur);}
+.ldhdr{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--brd);}
+.ldtitle{font-family:var(--disp);font-size:9px;letter-spacing:2px;color:var(--red);text-shadow:0 0 10px rgba(255,31,61,.4);}
+.ldatag{font-family:var(--mono);font-size:9px;color:var(--dim);}
+.ldlist{padding:5px 7px;display:flex;flex-direction:column;gap:4px;max-height:195px;overflow-y:auto;}
+.ldi{display:flex;align-items:center;gap:7px;padding:5px 7px;border:1px solid transparent;transition:all .2s;}
+.ldi.critical{border-color:rgba(255,31,61,.4);background:rgba(255,31,61,.07);}
+.ldi.high{border-color:rgba(255,106,26,.3);background:rgba(255,106,26,.05);}
+.ldi.medium{border-color:rgba(255,204,0,.25);background:rgba(255,204,0,.04);}
+.ldi.low{border-color:rgba(0,184,255,.2);background:rgba(0,184,255,.03);}
+.ldr{font-family:var(--disp);font-size:10px;font-weight:900;width:18px;text-align:center;flex-shrink:0;}
+.ldcity{font-family:var(--disp);font-size:11px;flex:1;}
+.ldcases{font-family:var(--mono);font-size:10px;text-align:right;flex-shrink:0;}
+.ldbw{width:45px;height:3px;background:var(--brd);border-radius:1px;flex-shrink:0;overflow:hidden;}
+.ldb{height:100%;border-radius:1px;}
+.ldst{font-family:var(--mono);font-size:7px;letter-spacing:1px;padding:2px 4px;border:1px solid;flex-shrink:0;}
+.emptyld{padding:18px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);}
+
+/* QUEUE */
+.qbox{flex-shrink:0;padding:7px 12px;border-bottom:1px solid var(--brd);background:var(--sur2);}
+.qlbl{font-family:var(--mono);font-size:9px;color:var(--dim);margin-bottom:4px;letter-spacing:1px;}
+.qnodes{font-family:var(--mono);font-size:10px;color:var(--blu);word-break:break-all;line-height:1.6;min-height:14px;}
+.qnodes.dq{color:var(--org);}
+
+/* LOG */
+.log{flex:1;overflow-y:auto;padding:7px 10px;font-family:var(--mono);font-size:10px;line-height:1.85;}
+.ll{border-bottom:1px solid rgba(22,45,71,.4);padding:2px 0;animation:fi .25s ease;}
+@keyframes fi{from{opacity:0;transform:translateX(5px);}to{opacity:1;transform:none;}}
+.lt{color:var(--dim);margin-right:6px;}
+
+::-webkit-scrollbar{width:3px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--brd);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PC<em>O</em>S <span style="color:var(--dim);font-size:10px">/// PANDEMIC CONTAINMENT OPTIMIZATION SYSTEM</span></div>
+  <div class="hdr-r">
+    <span><span class="pulse"></span>ONLINE</span>
+    <span id="clk" style="color:var(--blu)"></span>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT -->
+  <div class="left">
+    <div class="sec">
+      <div class="stitle">TRAVERSAL ALGORITHM</div>
+      <div class="algo-row">
+        <button class="abtn bon" id="bfsBtn" onclick="setAlgo('BFS')">BFS</button>
+        <button class="abtn" id="dfsBtn" onclick="setAlgo('DFS')">DFS</button>
+      </div>
+      <div class="ibox" id="ainfo">
+        <strong style="color:var(--blu)">BFS — Breadth-First Search</strong>
+        Explores cities <em>level-by-level</em> from outbreak origin. Level-1 cities are direct contacts — locking them down first creates a containment ring and stops further spread.
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="stitle">MAP SETTINGS</div>
+      <div class="slgrp">
+        <div class="slrow">
+          <div class="sllbl"><span>CITIES</span><span class="slv" id="nv">12</span></div>
+          <input type="range" min="6" max="20" value="12" id="ns" oninput="sv('ns','nv')">
+        </div>
+        <div class="slrow">
+          <div class="sllbl"><span>CONNECTIONS</span><span class="slv" id="ev">18</span></div>
+          <input type="range" min="5" max="45" value="18" id="es" oninput="sv('es','ev')">
+        </div>
+        <div class="slrow">
+          <div class="sllbl"><span>SPEED</span><span class="slv" id="spv">350ms</span></div>
+          <input type="range" min="50" max="1200" value="350" id="sps" oninput="svms('sps','spv')">
+        </div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="brow">
+        <button class="btn bgen" onclick="generateGraph()">⟳ GENERATE NEW MAP</button>
+        <button class="btn brun" id="runBtn" disabled onclick="runAlgo()">▶ ANALYZE &amp; RECOMMEND LOCKDOWN</button>
+        <button class="btn brst" onclick="resetAll()">✕ RESET</button>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="stitle">NODE LEGEND</div>
+      <div class="legend">
+        <div class="leg"><div class="ldot" style="background:var(--red);box-shadow:0 0 5px var(--red)"></div>Outbreak Origin</div>
+        <div class="leg"><div class="ldot" style="background:var(--org);box-shadow:0 0 5px var(--org)"></div>Active (currently visiting)</div>
+        <div class="leg"><div class="ldot" style="background:var(--yel);box-shadow:0 0 5px var(--yel)"></div>In Queue / Frontier</div>
+        <div class="leg"><div class="ldot" style="background:var(--grn);box-shadow:0 0 5px var(--grn)"></div>Analyzed &amp; Scored</div>
+        <div class="leg"><div class="ldot" style="background:var(--blu);box-shadow:0 0 5px var(--blu)"></div>Not Yet Visited</div>
+        <div class="leg"><div class="ldot" style="border:1px dashed var(--blu)"></div>Outer ring = case count</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <div class="stitle">HOW IT WORKS</div>
+      <div style="font-size:11px;color:var(--dim);line-height:1.8;font-family:var(--mono)">
+        1. Generate a city network<br>
+        2. Click a node → outbreak origin<br>
+        3. Choose BFS or DFS<br>
+        4. Run → lockdown list ranked by<br>
+        &nbsp;&nbsp;&nbsp;cases × proximity × connections
+      </div>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <div class="cw" id="cw">
+    <canvas id="gc"></canvas>
+    <div class="cvo">
+      <span id="oAlgo" style="color:var(--blu)">◆ BFS MODE</span>
+      <span id="oStep" style="color:var(--dim)">STEP: —</span>
+    </div>
+    <div class="cvb" id="cvMsg">CLICK ANY CITY NODE TO SET OUTBREAK ORIGIN</div>
+    <div class="zbtns">
+      <button class="zbtn" onclick="zoom(1.15)">+</button>
+      <button class="zbtn" onclick="zoom(0.87)">−</button>
+      <button class="zbtn" onclick="resetView()">⊡</button>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+
+    <div class="stats-row">
+      <div class="sbox"><div class="snum" id="sV" style="color:var(--grn)">0</div><div class="slbl">ANALYZED</div></div>
+      <div class="sbox"><div class="snum" id="sI" style="color:var(--red)">0</div><div class="slbl">ACTIVE</div></div>
+      <div class="sbox"><div class="snum" id="sS" style="color:var(--blu)">0</div><div class="slbl">STEPS</div></div>
+      <div class="sbox"><div class="snum" id="sT" style="color:var(--dim)">0</div><div class="slbl">CITIES</div></div>
+    </div>
+
+    <div class="ldpanel">
+      <div class="ldhdr">
+        <span class="ldtitle">⚠ LOCKDOWN RECOMMENDATIONS</span>
+        <span class="ldatag" id="ldTag">—</span>
+      </div>
+      <div class="ldlist" id="ldList">
+        <div class="emptyld">Run analysis to generate recommendations</div>
+      </div>
+    </div>
+
+    <div class="qbox">
+      <div class="qlbl" id="qLbl">BFS QUEUE (FIFO):</div>
+      <div class="qnodes" id="qN">—</div>
+    </div>
+
+    <div class="log" id="logArea">
+      <div style="color:var(--dim)">■ System ready. Generate a map to begin.</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ── STATE ──────────────────────────────────────────────────────
+let nodes=[], edges=[], adj={};
+let algo='BFS', src=null, running=false, steps=0;
+let sc=1, ox=0, oy=0, timer=null;
+let ns={}, visitOrder=[], maxCases=1;
+
+const canvas=document.getElementById('gc');
+const ctx=canvas.getContext('2d');
+const cw=document.getElementById('cw');
+
+// ── INIT ───────────────────────────────────────────────────────
+window.onload=()=>{
+  resize();
+  window.addEventListener('resize',resize);
+  canvas.addEventListener('click',onNodeClick);
+  setInterval(()=>{ document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-US',{hour12:false}); },1000);
+  document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});
+  generateGraph();
+};
+function resize(){ canvas.width=cw.clientWidth; canvas.height=cw.clientHeight; render(); }
+function sv(id,vid){ document.getElementById(vid).textContent=document.getElementById(id).value; }
+function svms(id,vid){ document.getElementById(vid).textContent=document.getElementById(id).value+'ms'; }
+
+// ── GENERATE GRAPH ─────────────────────────────────────────────
+function generateGraph(){
+  killTimer(); running=false;
+  const n=+document.getElementById('ns').value;
+  const te=+document.getElementById('es').value;
+  nodes=[]; edges=[]; adj={}; ns={}; src=null; steps=0; visitOrder=[];
+
+  const W=canvas.width, H=canvas.height, pad=85;
+  const NAMES=['Alpha','Beta','Gamma','Delta','Sigma','Omega','Kappa','Lambda','Theta','Zeta','Eta','Iota','Mu','Nu','Xi','Phi','Chi','Psi','Rho','Tau'];
+
+  for(let i=0;i<n;i++){
+    nodes.push({ id:i, x:pad+Math.random()*(W-pad*2), y:pad+Math.random()*(H-pad*2),
+      label:String.fromCharCode(65+i), name:NAMES[i]||('City'+i),
+      cases:Math.floor(Math.random()*950)+50, r:20 });
+    adj[i]=[]; ns[i]='unvisited';
+  }
+  maxCases=Math.max(...nodes.map(n=>n.cases));
+
+  // Repulsion
+  for(let it=0;it<60;it++){
+    for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+      if(i===j) continue;
+      const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y;
+      const d=Math.sqrt(dx*dx+dy*dy)||1;
+      if(d<95){ const f=(95-d)/d*.5;
+        nodes[i].x=Math.max(pad,Math.min(W-pad,nodes[i].x+dx*f));
+        nodes[i].y=Math.max(pad,Math.min(H-pad,nodes[i].y+dy*f)); }
+    }
+  }
+
+  // Spanning tree + extra edges
+  const sh=[...Array(n).keys()].sort(()=>Math.random()-.5);
+  for(let i=1;i<n;i++) addEdge(sh[i],sh[Math.floor(Math.random()*i)]);
+  let t=0;
+  while(edges.length<te && t<600){ t++;
+    const a=Math.floor(Math.random()*n), b=Math.floor(Math.random()*n);
+    if(a!==b&&!adj[a].includes(b)) addEdge(a,b); }
+
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('cvMsg').textContent='CLICK ANY CITY NODE TO SET OUTBREAK ORIGIN';
+  document.getElementById('qN').textContent='—';
+  document.getElementById('sT').textContent=n;
+  ['sV','sI','sS'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('ldList').innerHTML='<div class="emptyld">Run analysis to generate recommendations</div>';
+  document.getElementById('ldTag').textContent='—';
+  document.getElementById('logArea').innerHTML='<div style="color:var(--dim)">■ Map: '+n+' cities, '+edges.length+' connections. Each city has a random case count (shown below node).</div>';
+  render();
+}
+function addEdge(a,b){ edges.push({a,b,st:'n'}); adj[a].push(b); adj[b].push(a); }
+
+// ── ALGO SWITCH ────────────────────────────────────────────────
+function setAlgo(a){
+  algo=a;
+  document.getElementById('bfsBtn').className='abtn'+(a==='BFS'?' bon':'');
+  document.getElementById('dfsBtn').className='abtn'+(a==='DFS'?' don':'');
+  const info=document.getElementById('ainfo');
+  const oA=document.getElementById('oAlgo');
+  if(a==='BFS'){
+    info.className='ibox';
+    info.innerHTML='<strong style="color:var(--blu)">BFS — Breadth-First Search</strong>Explores cities <em>level-by-level</em>. Level-1 cities are direct contacts — locking them down first creates a containment ring around the outbreak origin.';
+    oA.style.color='var(--blu)'; oA.textContent='◆ BFS MODE';
+    document.getElementById('qLbl').textContent='BFS QUEUE (FIFO):';
+    document.getElementById('qN').className='qnodes';
+  } else {
+    info.className='ibox dfs';
+    info.innerHTML='<strong style="color:var(--org)">DFS — Depth-First Search</strong>Dives <em>deep along transmission chains</em> before backtracking. Identifies full infection corridors — lockdown chain entry points to break pathways.';
+    oA.style.color='var(--org)'; oA.textContent='◆ DFS MODE';
+    document.getElementById('qLbl').textContent='DFS STACK (LIFO):';
+    document.getElementById('qN').className='qnodes dq';
+  }
+}
+
+// ── NODE CLICK ─────────────────────────────────────────────────
+function onNodeClick(e){
+  const rect=canvas.getBoundingClientRect();
+  const mx=(e.clientX-rect.left-ox)/sc, my=(e.clientY-rect.top-oy)/sc;
+  for(const nd of nodes){
+    const dx=nd.x-mx, dy=nd.y-my;
+    if(Math.sqrt(dx*dx+dy*dy)<nd.r+7){
+      killTimer(); running=false;
+      for(const k in ns) ns[k]='unvisited';
+      for(const ed of edges) ed.st='n';
+      src=nd.id; ns[nd.id]='source';
+      steps=0; visitOrder=[];
+      document.getElementById('runBtn').disabled=false;
+      document.getElementById('oStep').textContent='STEP: —';
+      document.getElementById('cvMsg').textContent=`ORIGIN: ${nd.name} [${nd.label}] — ${nd.cases.toLocaleString()} cases — Press RUN`;
+      document.getElementById('ldList').innerHTML='<div class="emptyld">Run analysis to generate recommendations</div>';
+      ['sV','sI','sS'].forEach(id=>document.getElementById(id).textContent='0');
+      document.getElementById('sI').textContent=nd.cases.toLocaleString();
+      log('ORIGIN',`${nd.name} [${nd.label}] selected — ${nd.cases.toLocaleString()} active cases`,'var(--red)');
+      render(); return;
+    }
+  }
+}
+
+// ── BFS GENERATOR ──────────────────────────────────────────────
+// Purpose: find shortest-hop spread rings. 
+// Result: cities ranked by (cases × (maxLevel-level) × connections)
+// → closest high-case cities = critical lockdown targets
+function* bfsGen(start){
+  const vis=new Set([start]), q=[start], lv={[start]:0};
+  ns[start]='source';
+  while(q.length>0){
+    const cur=q.shift();
+    ns[cur]=cur===start?'source':'active';
+    updateQ(q);
+    yield {type:'visit',node:cur,lv:lv[cur]};
+    for(const nb of adj[cur]){
+      if(!vis.has(nb)){
+        vis.add(nb); lv[nb]=(lv[cur]||0)+1;
+        ns[nb]='queued'; markE(cur,nb); q.push(nb);
+        updateQ(q);
+        yield {type:'disc',node:nb,from:cur,lv:lv[nb]};
+      }
+    }
+    ns[cur]='done';
+    visitOrder.push({id:cur,pos:lv[cur]});
+    yield {type:'done',node:cur};
+  }
+}
+
+// ── DFS GENERATOR ──────────────────────────────────────────────
+// Purpose: trace deep transmission chains.
+// Result: cities ranked by (cases × (maxDepth-depth*0.5) × connections)
+// → early chain nodes + high cases = corridor lockdown targets
+function* dfsGen(start){
+  const vis=new Set(), stk=[start], dp={[start]:0};
+  while(stk.length>0){
+    const cur=stk.pop();
+    if(vis.has(cur)) continue;
+    vis.add(cur); ns[cur]=cur===start?'source':'active';
+    updateQ(stk);
+    yield {type:'visit',node:cur,dp:dp[cur]||0};
+    for(const nb of [...adj[cur]].reverse()){
+      if(!vis.has(nb)){
+        ns[nb]='queued'; markE(cur,nb);
+        dp[nb]=(dp[cur]||0)+1; stk.push(nb);
+        updateQ(stk);
+        yield {type:'disc',node:nb,from:cur,dp:dp[nb]};
+      }
+    }
+    ns[cur]='done';
+    visitOrder.push({id:cur,pos:dp[cur]||0});
+    yield {type:'done',node:cur};
+  }
+}
+
+function markE(a,b){ for(const e of edges) if((e.a===a&&e.b===b)||(e.a===b&&e.b===a)) e.st='a'; }
+function updateQ(fr){
+  const lbl=fr.slice(-10).map(id=>nodes[id]?.label||id).join(algo==='BFS'?' → ':' ↑ ');
+  document.getElementById('qN').textContent=lbl||'(empty)';
+}
+
+// ── RUN ───────────────────────────────────────────────────────
+function runAlgo(){
+  if(src===null) return;
+  killTimer(); running=false; steps=0; visitOrder=[];
+  for(const k in ns) ns[k]='unvisited';
+  ns[src]='source';
+  for(const e of edges) e.st='n';
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('cvMsg').textContent=`RUNNING ${algo} — ANALYZING INFECTION SPREAD...`;
+  document.getElementById('ldList').innerHTML='<div class="emptyld">Analyzing...</div>';
+  document.getElementById('ldTag').textContent=algo+' ANALYSIS';
+  const gen=algo==='BFS'?bfsGen(src):dfsGen(src);
+  const spd=+document.getElementById('sps').value;
+  running=true;
+  log(algo,`Starting ${algo} from ${nodes[src].name} [${nodes[src].label}] (${nodes[src].cases.toLocaleString()} cases)`,algo==='BFS'?'var(--blu)':'var(--org)');
+
+  function step(){
+    let r; try{ r=gen.next(); } catch(e){ running=false; return; }
+    if(r.done){
+      running=false;
+      document.getElementById('runBtn').disabled=false;
+      document.getElementById('cvMsg').textContent='✓ ANALYSIS DONE — LOCKDOWN LIST READY BELOW';
+      document.getElementById('oStep').textContent='STEP: '+steps;
+      updateStats(); buildLockdown(); render(); return;
+    }
+    const v=r.value; steps++;
+    document.getElementById('oStep').textContent='STEP: '+steps;
+    if(v.type==='disc'){
+      const n1=nodes[v.node], n2=nodes[v.from];
+      const tag=algo==='BFS'?`level ${v.lv}`:`depth ${v.dp}`;
+      log('SPREAD',`${n2.name}→${n1.name}: ${n1.cases.toLocaleString()} cases (${tag})`,algo==='BFS'?'var(--blu)':'var(--org)');
+    }
+    if(v.type==='done') log('SCORED',`${nodes[v.node].name} scored`,'var(--grn)');
+    updateStats(); render();
+    timer=setTimeout(step,spd);
+  }
+  step();
+}
+
+// ── LOCKDOWN SCORING ENGINE ────────────────────────────────────
+// Score = cases × proximityWeight × (1 + connections × 0.18)
+// BFS  proximityWeight: closer to origin (low level) = higher weight
+//   → lockdown cities that are NEAREST to source with most cases
+// DFS  proximityWeight: early in chain (low depth) = higher weight
+//   → lockdown entry points of high-case transmission corridors
+function buildLockdown(){
+  if(!visitOrder.length) return;
+  const maxPos=Math.max(...visitOrder.map(v=>v.pos))||1;
+
+  const scored=visitOrder.map(v=>{
+    const nd=nodes[v.id];
+    const conn=adj[v.id].length;
+    // Proximity weight: 1.0 (far/deep) to 2.0 (close/shallow)
+    const proxW = 1 + (maxPos - v.pos) / maxPos;
+    const score = nd.cases * proxW * (1 + conn * 0.18);
+    return { id:v.id, nd, score, cases:nd.cases, conn, pos:v.pos };
+  }).sort((a,b)=>b.score-a.score);
+
+  const maxScore=scored[0]?.score||1;
+  const list=document.getElementById('ldList');
+  list.innerHTML='';
+
+  scored.forEach((item,i)=>{
+    const pct=item.score/maxScore;
+    const sev=pct>.75?'critical':pct>.5?'high':pct>.25?'medium':'low';
+    const col=sev==='critical'?'var(--red)':sev==='high'?'var(--org)':sev==='medium'?'var(--yel)':'var(--blu)';
+    const stxt=sev==='critical'?'CRITICAL':sev==='high'?'HIGH':sev==='medium'?'MODERATE':'LOW';
+    const posTag=algo==='BFS'?`L${item.pos}`:`D${item.pos}`;
+
+    const div=document.createElement('div');
+    div.className=`ldi ${sev}`;
+    div.innerHTML=`
+      <div class="ldr" style="color:${col}">#${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div class="ldcity" style="color:${col}">${item.nd.name}
+          <span style="color:var(--dim);font-size:8px">[${item.nd.label}] ${posTag}</span>
+        </div>
+        <div class="ldbw"><div class="ldb" style="width:${(pct*100).toFixed(0)}%;background:${col}"></div></div>
+      </div>
+      <div class="ldcases" style="color:${col}">
+        <div style="font-size:12px;font-family:var(--disp)">${item.cases.toLocaleString()}</div>
+        <div style="font-size:8px;color:var(--dim)">${item.conn} links</div>
+      </div>
+      <div class="ldst" style="border-color:${col};color:${col}">${stxt}</div>
+    `;
+    list.appendChild(div);
+  });
+
+  const top3=scored.slice(0,3).map(x=>`${x.nd.name}(${x.cases.toLocaleString()})`).join(', ');
+  log('LOCKDOWN',`Top cities: ${top3}`,'var(--red)');
+  if(algo==='BFS')
+    log('BFS','Strategy: lockdown LEVEL-1 cities first to ring-fence outbreak origin','var(--blu)');
+  else
+    log('DFS','Strategy: lockdown DEPTH-0/1 corridor entry points to break transmission chains','var(--org)');
+}
+
+// ── STATS ──────────────────────────────────────────────────────
+function updateStats(){
+  let done=0,active=0;
+  for(const k in ns){
+    if(ns[k]==='done') done++;
+    if(ns[k]==='active'||ns[k]==='queued'||ns[k]==='source') active++;
+  }
+  document.getElementById('sV').textContent=done;
+  document.getElementById('sI').textContent=active;
+  document.getElementById('sS').textContent=steps;
+  document.getElementById('sT').textContent=nodes.length;
+}
+
+// ── LOG ───────────────────────────────────────────────────────
+let lc=0;
+function log(tag,msg,col='var(--txt)'){
+  lc++;
+  const area=document.getElementById('logArea');
+  const t=new Date().toLocaleTimeString('en-US',{hour12:false});
+  const d=document.createElement('div'); d.className='ll';
+  d.innerHTML=`<span class="lt">${t}</span><span style="color:${col}">[${tag}]</span> <span style="color:var(--txt)">${msg}</span>`;
+  area.appendChild(d); area.scrollTop=area.scrollHeight;
+  if(lc>300) area.removeChild(area.firstChild);
+}
+
+// ── RENDER ─────────────────────────────────────────────────────
+const COLS={
+  unvisited:{ fill:'#060f1a', stroke:'#00b8ff', glow:'rgba(0,184,255,.25)' },
+  source:   { fill:'#2a0008', stroke:'#ff1f3d', glow:'rgba(255,31,61,.65)' },
+  active:   { fill:'#1e0800', stroke:'#ff6a1a', glow:'rgba(255,106,26,.55)' },
+  queued:   { fill:'#181200', stroke:'#ffcc00', glow:'rgba(255,204,0,.45)' },
+  done:     { fill:'#00100a', stroke:'#00f57a', glow:'rgba(0,245,122,.35)' },
+};
+
+function render(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save();
+  ctx.translate(ox,oy);
+  ctx.scale(sc,sc);
+
+  // Edges
+  for(const e of edges){
+    const a=nodes[e.a], b=nodes[e.b];
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
+    if(e.st==='a'){ ctx.strokeStyle=algo==='BFS'?'rgba(0,184,255,.55)':'rgba(255,106,26,.55)'; ctx.lineWidth=2; ctx.setLineDash([]); }
+    else { ctx.strokeStyle='rgba(22,45,71,.7)'; ctx.lineWidth=1; ctx.setLineDash([5,5]); }
+    ctx.stroke(); ctx.setLineDash([]);
+  }
+
+  // Nodes
+  for(const nd of nodes){
+    const st=ns[nd.id]||'unvisited';
+    const c=COLS[st];
+    const cp=nd.cases/maxCases;
+
+    // Case-scaled dashed ring (bigger ring = more cases)
+    ctx.beginPath();
+    ctx.arc(nd.x,nd.y,nd.r+4+cp*12,0,Math.PI*2);
+    ctx.strokeStyle=c.stroke+'33'; ctx.lineWidth=1;
+    ctx.setLineDash([3,4]); ctx.stroke(); ctx.setLineDash([]);
+
+    // Glow
+    const g=ctx.createRadialGradient(nd.x,nd.y,0,nd.x,nd.y,nd.r*3);
+    g.addColorStop(0,c.glow); g.addColorStop(1,'transparent');
+    ctx.beginPath(); ctx.arc(nd.x,nd.y,nd.r*3,0,Math.PI*2);
+    ctx.fillStyle=g; ctx.fill();
+
+    // Body
+    ctx.beginPath(); ctx.arc(nd.x,nd.y,nd.r,0,Math.PI*2);
+    ctx.fillStyle=c.fill; ctx.fill();
+    ctx.strokeStyle=c.stroke; ctx.lineWidth=st==='source'?2.5:1.5; ctx.stroke();
+
+    // Letter label
+    ctx.fillStyle=c.stroke; ctx.font=`bold 12px 'Orbitron',monospace`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(nd.label,nd.x,nd.y);
+
+    // Case count below
+    ctx.font=`9px 'Share Tech Mono',monospace`; ctx.fillStyle=c.stroke+'bb';
+    const cstr=nd.cases>=1000?(nd.cases/1000).toFixed(1)+'k':nd.cases;
+    ctx.fillText(cstr,nd.x,nd.y+nd.r+11);
+
+    // Active indicator dot
+    if(st==='active'||st==='queued'){
+      ctx.beginPath(); ctx.arc(nd.x+nd.r*.72,nd.y-nd.r*.72,4,0,Math.PI*2);
+      ctx.fillStyle=st==='queued'?'#ffcc00':'#ff6a1a'; ctx.fill();
+    }
+  }
+  ctx.restore();
+}
+
+// ── ZOOM/PAN ──────────────────────────────────────────────────
+function zoom(f){
+  const cx=canvas.width/2, cy=canvas.height/2;
+  ox=cx-(cx-ox)*f; oy=cy-(cy-oy)*f; sc*=f; render();
+}
+function resetView(){ sc=1; ox=0; oy=0; render(); }
+function resetAll(){
+  killTimer(); running=false; src=null; steps=0; visitOrder=[];
+  for(const k in ns) ns[k]='unvisited';
+  for(const e of edges) e.st='n';
+  document.getElementById('runBtn').disabled=true;
+  document.getElementById('cvMsg').textContent='CLICK ANY CITY NODE TO SET OUTBREAK ORIGIN';
+  document.getElementById('qN').textContent='—';
+  document.getElementById('oStep').textContent='STEP: —';
+  ['sV','sI','sS'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('ldList').innerHTML='<div class="emptyld">Run analysis to generate recommendations</div>';
+  document.getElementById('ldTag').textContent='—';
+  document.getElementById('logArea').innerHTML='<div style="color:var(--dim)">■ Reset complete.</div>';
+  lc=0; render();
+}
+function killTimer(){ if(timer){ clearTimeout(timer); timer=null; } }
+</script>
+</body>
+</html>
