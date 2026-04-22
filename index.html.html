@@ -84,7 +84,7 @@ canvas{position:absolute;top:0;left:0;cursor:crosshair;}
 .ldhdr{display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--brd);}
 .ldtitle{font-family:var(--disp);font-size:9px;letter-spacing:2px;color:var(--red);text-shadow:0 0 10px rgba(255,31,61,.4);}
 .ldatag{font-family:var(--mono);font-size:9px;color:var(--dim);}
-.ldlist{padding:5px 7px;display:flex;flex-direction:column;gap:4px;max-height:195px;overflow-y:auto;}
+.ldlist{padding:5px 7px;display:flex;flex-direction:column;gap:4px;max-height:140px;overflow-y:auto;}
 .ldi{display:flex;align-items:center;gap:7px;padding:5px 7px;border:1px solid transparent;transition:all .2s;}
 .ldi.critical{border-color:rgba(255,31,61,.4);background:rgba(255,31,61,.07);}
 .ldi.high{border-color:rgba(255,106,26,.3);background:rgba(255,106,26,.05);}
@@ -97,6 +97,20 @@ canvas{position:absolute;top:0;left:0;cursor:crosshair;}
 .ldb{height:100%;border-radius:1px;}
 .ldst{font-family:var(--mono);font-size:7px;letter-spacing:1px;padding:2px 4px;border:1px solid;flex-shrink:0;}
 .emptyld{padding:18px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--dim);}
+
+/* SUPER SPREADER */
+.sspanel{flex-shrink:0;border-bottom:1px solid var(--brd);background:var(--sur2);}
+.sshdr{display:flex;align-items:center;justify-content:space-between;padding:7px 12px;border-bottom:1px solid var(--brd);}
+.sstitle{font-family:var(--disp);font-size:9px;letter-spacing:2px;color:#9b3fff;text-shadow:0 0 10px rgba(155,63,255,.5);}
+.sslist{padding:5px 8px;display:flex;flex-direction:column;gap:3px;}
+.ssi{display:flex;align-items:center;gap:7px;padding:4px 7px;border:1px solid rgba(155,63,255,.35);background:rgba(155,63,255,.06);}
+.ssrank{font-family:var(--disp);font-size:10px;font-weight:900;color:#9b3fff;width:16px;text-align:center;flex-shrink:0;}
+.sslabel{font-family:var(--disp);font-size:14px;font-weight:900;color:#cc77ff;width:22px;flex-shrink:0;}
+.ssbar-wrap{flex:1;height:3px;background:var(--brd);border-radius:1px;overflow:hidden;}
+.ssbar{height:100%;border-radius:1px;background:linear-gradient(90deg,#9b3fff,#cc77ff);}
+.ssdetail{font-family:var(--mono);font-size:9px;color:#7a4fbf;text-align:right;flex-shrink:0;line-height:1.4;}
+.sstag{font-family:var(--mono);font-size:7px;letter-spacing:1px;padding:2px 4px;border:1px solid rgba(155,63,255,.5);color:#9b3fff;flex-shrink:0;}
+.emptyss{padding:10px;text-align:center;font-family:var(--mono);font-size:10px;color:var(--dim);}
 
 /* QUEUE */
 .qbox{flex-shrink:0;padding:7px 12px;border-bottom:1px solid var(--brd);background:var(--sur2);}
@@ -176,6 +190,7 @@ canvas{position:absolute;top:0;left:0;cursor:crosshair;}
         <div class="leg"><div class="ldot" style="background:var(--grn);box-shadow:0 0 5px var(--grn)"></div>Analyzed &amp; Scored</div>
         <div class="leg"><div class="ldot" style="background:var(--blu);box-shadow:0 0 5px var(--blu)"></div>Not Yet Visited</div>
         <div class="leg"><div class="ldot" style="border:1px dashed var(--blu)"></div>Outer ring = case count</div>
+        <div class="leg"><div style="width:9px;height:9px;flex-shrink:0;font-size:10px;line-height:1;color:#cc77ff">☣</div>Super Spreader node</div>
       </div>
     </div>
 
@@ -226,6 +241,17 @@ canvas{position:absolute;top:0;left:0;cursor:crosshair;}
       </div>
     </div>
 
+    <!-- SUPER SPREADER PANEL -->
+    <div class="sspanel">
+      <div class="sshdr">
+        <span class="sstitle">☣ SUPER SPREADERS</span>
+        <span style="font-family:var(--mono);font-size:8px;color:#7a4fbf">HIGH CONNECTIONS × HIGH CASES</span>
+      </div>
+      <div class="sslist" id="ssList">
+        <div class="emptyss">Run analysis to detect super spreaders</div>
+      </div>
+    </div>
+
     <div class="qbox">
       <div class="qlbl" id="qLbl">BFS QUEUE (FIFO):</div>
       <div class="qnodes" id="qN">—</div>
@@ -244,6 +270,7 @@ let nodes=[], edges=[], adj={};
 let algo='BFS', src=null, running=false, steps=0;
 let sc=1, ox=0, oy=0, timer=null;
 let ns={}, visitOrder=[], maxCases=1;
+let superSpreaders=[];
 
 const canvas=document.getElementById('gc');
 const ctx=canvas.getContext('2d');
@@ -252,13 +279,14 @@ const cw=document.getElementById('cw');
 // ── INIT ───────────────────────────────────────────────────────
 window.onload=()=>{
   resize();
-  window.addEventListener('resize',resize);
+  window.addEventListener('resize',()=>{ canvas.width=cw.clientWidth; canvas.height=cw.clientHeight; });
   canvas.addEventListener('click',onNodeClick);
   setInterval(()=>{ document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-US',{hour12:false}); },1000);
   document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-US',{hour12:false});
   generateGraph();
+  (function loop(){ render(); requestAnimationFrame(loop); })();
 };
-function resize(){ canvas.width=cw.clientWidth; canvas.height=cw.clientHeight; render(); }
+function resize(){ canvas.width=cw.clientWidth; canvas.height=cw.clientHeight; }
 function sv(id,vid){ document.getElementById(vid).textContent=document.getElementById(id).value; }
 function svms(id,vid){ document.getElementById(vid).textContent=document.getElementById(id).value+'ms'; }
 
@@ -267,7 +295,7 @@ function generateGraph(){
   killTimer(); running=false;
   const n=+document.getElementById('ns').value;
   const te=+document.getElementById('es').value;
-  nodes=[]; edges=[]; adj={}; ns={}; src=null; steps=0; visitOrder=[];
+  nodes=[]; edges=[]; adj={}; ns={}; src=null; steps=0; visitOrder=[]; superSpreaders=[];
 
   const W=canvas.width, H=canvas.height, pad=85;
   for(let i=0;i<n;i++){
@@ -305,6 +333,7 @@ function generateGraph(){
   document.getElementById('sT').textContent=n;
   ['sV','sI','sS'].forEach(id=>document.getElementById(id).textContent='0');
   document.getElementById('ldList').innerHTML='<div class="emptyld">Run analysis to generate recommendations</div>';
+  document.getElementById('ssList').innerHTML='<div class="emptyss">Run analysis to detect super spreaders</div>';
   document.getElementById('ldTag').textContent='—';
   document.getElementById('logArea').innerHTML='<div style="color:var(--dim)">■ Map: '+n+' cities, '+edges.length+' connections. Each city has a random case count (shown below node).</div>';
   render();
@@ -349,6 +378,7 @@ function onNodeClick(e){
       document.getElementById('oStep').textContent='STEP: —';
       document.getElementById('cvMsg').textContent=`ORIGIN: [${nd.label}] — ${nd.cases.toLocaleString()} cases — Press RUN`;
       document.getElementById('ldList').innerHTML='<div class="emptyld">Run analysis to generate recommendations</div>';
+      document.getElementById('ssList').innerHTML='<div class="emptyss">Run analysis to detect super spreaders</div>';
       ['sV','sI','sS'].forEach(id=>document.getElementById(id).textContent='0');
       document.getElementById('sI').textContent=nd.cases.toLocaleString();
       log('ORIGIN',`[${nd.label}] selected — ${nd.cases.toLocaleString()} active cases`,'var(--red)');
@@ -484,12 +514,13 @@ function buildLockdown(){
     const stxt=sev==='critical'?'CRITICAL':sev==='high'?'HIGH':sev==='medium'?'MODERATE':'LOW';
     const posTag=algo==='BFS'?`L${item.pos}`:`D${item.pos}`;
 
+    const isSS=superSpreaders.includes(item.id);
     const div=document.createElement('div');
     div.className=`ldi ${sev}`;
     div.innerHTML=`
       <div class="ldr" style="color:${col}">#${i+1}</div>
       <div style="flex:1;min-width:0">
-        <div class="ldcity" style="color:${col}">${item.nd.label}
+        <div class="ldcity" style="color:${col}">${item.nd.label}${isSS?` <span style="color:#cc77ff;font-size:9px">☣SS</span>`:''}
           <span style="color:var(--dim);font-size:8px">${posTag}</span>
         </div>
         <div class="ldbw"><div class="ldb" style="width:${(pct*100).toFixed(0)}%;background:${col}"></div></div>
@@ -509,6 +540,59 @@ function buildLockdown(){
     log('BFS','Strategy: lockdown LEVEL-1 cities first to ring-fence outbreak origin','var(--blu)');
   else
     log('DFS','Strategy: lockdown DEPTH-0/1 corridor entry points to break transmission chains','var(--org)');
+
+  buildSuperSpreaders();
+}
+
+// ── SUPER SPREADER DETECTION ───────────────────────────────────
+// Super Spreader Score = connections² × cases
+// A node with many connections AND many cases can infect far more cities
+// than a high-case node with few connections — that's what makes it a super spreader
+function buildSuperSpreaders(){
+  // Only score nodes that were visited (reachable from outbreak)
+  const reachable=new Set(visitOrder.map(v=>v.id));
+  reachable.add(src);
+
+  const ssScored=nodes
+    .filter(nd=>reachable.has(nd.id))
+    .map(nd=>{
+      const conn=adj[nd.id].length;
+      // Super spreader score: connections squared × cases
+      // Squaring connections amplifies high-connectivity nodes
+      const ssScore=Math.pow(conn,2)*nd.cases;
+      return { nd, conn, ssScore };
+    })
+    .sort((a,b)=>b.ssScore-a.ssScore);
+
+  superSpreaders=ssScored.slice(0,5).map(x=>x.nd.id);
+  const maxSS=ssScored[0]?.ssScore||1;
+  const list=document.getElementById('ssList');
+  list.innerHTML='';
+
+  ssScored.slice(0,5).forEach((item,i)=>{
+    const pct=item.ssScore/maxSS;
+    const isTop=i===0;
+    const div=document.createElement('div');
+    div.className='ssi';
+    div.innerHTML=`
+      <div class="ssrank">#${i+1}</div>
+      <div class="sslabel">${item.nd.label}</div>
+      <div style="flex:1">
+        <div class="ssbar-wrap"><div class="ssbar" style="width:${(pct*100).toFixed(0)}%"></div></div>
+      </div>
+      <div class="ssdetail">
+        <div>${item.nd.cases.toLocaleString()} cases</div>
+        <div>${item.conn} links</div>
+      </div>
+      <div class="sstag">${isTop?'SUPER':'HIGH'}</div>
+    `;
+    list.appendChild(div);
+  });
+
+  const ss1=ssScored[0];
+  if(ss1) log('SUPER',`[${ss1.nd.label}] is #1 Super Spreader — ${ss1.conn} connections × ${ss1.nd.cases.toLocaleString()} cases = score ${ss1.ssScore.toLocaleString()}`,'#cc77ff');
+  log('SUPER','Isolate super spreaders IMMEDIATELY — they can each infect all direct neighbours','#9b3fff');
+  render();
 }
 
 // ── STATS ──────────────────────────────────────────────────────
@@ -554,9 +638,18 @@ function render(){
   // Edges
   for(const e of edges){
     const a=nodes[e.a], b=nodes[e.b];
+    const isSsEdge=superSpreaders.includes(e.a)||superSpreaders.includes(e.b);
     ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y);
-    if(e.st==='a'){ ctx.strokeStyle=algo==='BFS'?'rgba(0,184,255,.55)':'rgba(255,106,26,.55)'; ctx.lineWidth=2; ctx.setLineDash([]); }
-    else { ctx.strokeStyle='rgba(22,45,71,.7)'; ctx.lineWidth=1; ctx.setLineDash([5,5]); }
+    if(e.st==='a'){
+      ctx.strokeStyle=algo==='BFS'?'rgba(0,184,255,.55)':'rgba(255,106,26,.55)';
+      ctx.lineWidth=2; ctx.setLineDash([]);
+    } else if(isSsEdge && superSpreaders.length>0){
+      ctx.strokeStyle='rgba(155,63,255,.4)';
+      ctx.lineWidth=1.5; ctx.setLineDash([3,3]);
+    } else {
+      ctx.strokeStyle='rgba(22,45,71,.7)';
+      ctx.lineWidth=1; ctx.setLineDash([5,5]);
+    }
     ctx.stroke(); ctx.setLineDash([]);
   }
 
@@ -565,6 +658,24 @@ function render(){
     const st=ns[nd.id]||'unvisited';
     const c=COLS[st];
     const cp=nd.cases/maxCases;
+
+    // Super spreader pulsing ring
+    if(superSpreaders.includes(nd.id)){
+      const pulse=0.5+0.5*Math.sin(Date.now()/300+nd.id);
+      ctx.beginPath();
+      ctx.arc(nd.x,nd.y,nd.r+8+pulse*5,0,Math.PI*2);
+      ctx.strokeStyle=`rgba(155,63,255,${0.4+pulse*0.4})`;
+      ctx.lineWidth=2;
+      ctx.setLineDash([4,3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // ☣ icon above node
+      ctx.font=`10px sans-serif`;
+      ctx.fillStyle='#cc77ff';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText('☣',nd.x,nd.y-nd.r-10);
+    }
 
     // Case-scaled dashed ring (bigger ring = more cases)
     ctx.beginPath();
@@ -618,6 +729,7 @@ function resetAll(){
   document.getElementById('oStep').textContent='STEP: —';
   ['sV','sI','sS'].forEach(id=>document.getElementById(id).textContent='0');
   document.getElementById('ldList').innerHTML='<div class="emptyld">Run analysis to generate recommendations</div>';
+  document.getElementById('ssList').innerHTML='<div class="emptyss">Run analysis to detect super spreaders</div>';
   document.getElementById('ldTag').textContent='—';
   document.getElementById('logArea').innerHTML='<div style="color:var(--dim)">■ Reset complete.</div>';
   lc=0; render();
