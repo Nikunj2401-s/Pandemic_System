@@ -270,11 +270,10 @@ function generateGraph(){
   nodes=[]; edges=[]; adj={}; ns={}; src=null; steps=0; visitOrder=[];
 
   const W=canvas.width, H=canvas.height, pad=85;
-  const NAMES=['Alpha','Beta','Gamma','Delta','Sigma','Omega','Kappa','Lambda','Theta','Zeta','Eta','Iota','Mu','Nu','Xi','Phi','Chi','Psi','Rho','Tau'];
-
   for(let i=0;i<n;i++){
+    const lbl=String.fromCharCode(65+i);
     nodes.push({ id:i, x:pad+Math.random()*(W-pad*2), y:pad+Math.random()*(H-pad*2),
-      label:String.fromCharCode(65+i), name:NAMES[i]||('City'+i),
+      label:lbl, name:lbl,
       cases:Math.floor(Math.random()*950)+50, r:20 });
     adj[i]=[]; ns[i]='unvisited';
   }
@@ -348,11 +347,11 @@ function onNodeClick(e){
       steps=0; visitOrder=[];
       document.getElementById('runBtn').disabled=false;
       document.getElementById('oStep').textContent='STEP: —';
-      document.getElementById('cvMsg').textContent=`ORIGIN: ${nd.name} [${nd.label}] — ${nd.cases.toLocaleString()} cases — Press RUN`;
+      document.getElementById('cvMsg').textContent=`ORIGIN: [${nd.label}] — ${nd.cases.toLocaleString()} cases — Press RUN`;
       document.getElementById('ldList').innerHTML='<div class="emptyld">Run analysis to generate recommendations</div>';
       ['sV','sI','sS'].forEach(id=>document.getElementById(id).textContent='0');
       document.getElementById('sI').textContent=nd.cases.toLocaleString();
-      log('ORIGIN',`${nd.name} [${nd.label}] selected — ${nd.cases.toLocaleString()} active cases`,'var(--red)');
+      log('ORIGIN',`[${nd.label}] selected — ${nd.cases.toLocaleString()} active cases`,'var(--red)');
       render(); return;
     }
   }
@@ -430,7 +429,7 @@ function runAlgo(){
   const gen=algo==='BFS'?bfsGen(src):dfsGen(src);
   const spd=+document.getElementById('sps').value;
   running=true;
-  log(algo,`Starting ${algo} from ${nodes[src].name} [${nodes[src].label}] (${nodes[src].cases.toLocaleString()} cases)`,algo==='BFS'?'var(--blu)':'var(--org)');
+  log(algo,`Starting ${algo} from [${nodes[src].label}] (${nodes[src].cases.toLocaleString()} cases)`,algo==='BFS'?'var(--blu)':'var(--org)');
 
   function step(){
     let r; try{ r=gen.next(); } catch(e){ running=false; return; }
@@ -446,9 +445,9 @@ function runAlgo(){
     if(v.type==='disc'){
       const n1=nodes[v.node], n2=nodes[v.from];
       const tag=algo==='BFS'?`level ${v.lv}`:`depth ${v.dp}`;
-      log('SPREAD',`${n2.name}→${n1.name}: ${n1.cases.toLocaleString()} cases (${tag})`,algo==='BFS'?'var(--blu)':'var(--org)');
+      log('SPREAD',`[${n2.label}]→[${n1.label}]: ${n1.cases.toLocaleString()} cases (${tag})`,algo==='BFS'?'var(--blu)':'var(--org)');
     }
-    if(v.type==='done') log('SCORED',`${nodes[v.node].name} scored`,'var(--grn)');
+    if(v.type==='done') log('SCORED',`[${nodes[v.node].label}] scored`,'var(--grn)');
     updateStats(); render();
     timer=setTimeout(step,spd);
   }
@@ -490,8 +489,8 @@ function buildLockdown(){
     div.innerHTML=`
       <div class="ldr" style="color:${col}">#${i+1}</div>
       <div style="flex:1;min-width:0">
-        <div class="ldcity" style="color:${col}">${item.nd.name}
-          <span style="color:var(--dim);font-size:8px">[${item.nd.label}] ${posTag}</span>
+        <div class="ldcity" style="color:${col}">${item.nd.label}
+          <span style="color:var(--dim);font-size:8px">${posTag}</span>
         </div>
         <div class="ldbw"><div class="ldb" style="width:${(pct*100).toFixed(0)}%;background:${col}"></div></div>
       </div>
@@ -504,7 +503,7 @@ function buildLockdown(){
     list.appendChild(div);
   });
 
-  const top3=scored.slice(0,3).map(x=>`${x.nd.name}(${x.cases.toLocaleString()})`).join(', ');
+  const top3=scored.slice(0,3).map(x=>`[${x.nd.label}] ${x.cases.toLocaleString()}`).join(', ');
   log('LOCKDOWN',`Top cities: ${top3}`,'var(--red)');
   if(algo==='BFS')
     log('BFS','Strategy: lockdown LEVEL-1 cities first to ring-fence outbreak origin','var(--blu)');
